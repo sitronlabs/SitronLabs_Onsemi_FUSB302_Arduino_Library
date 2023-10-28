@@ -1,0 +1,17 @@
+fusb302	KEYWORD1
+setup	KEYWORD2
+detect	KEYWORD2
+reset	KEYWORD2
+power_set	KEYWORD2
+register_read	KEYWORD2
+register_write	KEYWORD2
+cc_pull_down	KEYWORD2
+cc_pull_up	KEYWORD2
+cc_measure	KEYWORD2
+cc_orientation_set	KEYWORD2
+vbus_measure	KEYWORD2
+autogoodcrc_enable	KEYWORD2
+pd_rx_flush	KEYWORD2
+pd_tx_flush	KEYWORD2
+pd_message_receive	KEYWORD2
+pd_message_send	KEYWORD2
