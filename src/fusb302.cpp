@@ -618,7 +618,7 @@ int fusb302::pd_rx_flush(void) {
         return -EIO;
     }
     reg_control1 |= (1U << 2U);
-    res = register_write(FUSB302_REGISTER_CONTROL1, &reg_control1, 1);
+    res = register_write(FUSB302_REGISTER_CONTROL1, &reg_control1);
     if (res < 0) {
         CONFIG_FUSB302_LOG_FUNCTION("Failed to flush rx fifo!");
         return -EIO;
