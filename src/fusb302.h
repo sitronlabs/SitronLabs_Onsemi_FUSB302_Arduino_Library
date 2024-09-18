@@ -79,7 +79,7 @@ class fusb302 {
     int vbus_measure(float &voltage);
 
     /* PD logic */
-    int autogoodcrc_enable(const bool enabled);
+    int pd_autogoodcrc_set(const bool enabled);
     int pd_autoretry_set(const int retries);
     int pd_rx_flush(void);
     int pd_tx_flush(void);

@@ -536,9 +536,9 @@ int fusb302::vbus_measure(float &voltage_v) {
 /**
  *
  * @param[in] enabled
- * @return
+ * @return 0 in case of success, or a negative error code otherwise.
  */
-int fusb302::autogoodcrc_enable(const bool enabled) {
+int fusb302::pd_autogoodcrc_set(const bool enabled) {
     int res;
 
     /* Read register */
