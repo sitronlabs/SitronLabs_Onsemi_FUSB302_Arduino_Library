@@ -80,6 +80,7 @@ class fusb302 {
 
     /* PD logic */
     int autogoodcrc_enable(const bool enabled);
+    int pd_autoretry_set(const int retries);
     int pd_rx_flush(void);
     int pd_tx_flush(void);
     int pd_message_receive(struct usb_pd_message &msg);

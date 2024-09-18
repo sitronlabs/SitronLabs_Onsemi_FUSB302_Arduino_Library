@@ -20,36 +20,6 @@ int fusb302::setup(TwoWire &i2c_library, const uint8_t i2c_address) {
     m_i2c_library = &i2c_library;
     m_i2c_address = i2c_address;
 
-    /* Restore default settings */
-    uint8_t reg_reset = 0x01;
-    res = register_write(FUSB302_REGISTER_RESET, &reg_reset);
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to reset device!");
-        return -EIO;
-    }
-
-    /* Enable automatic retransmission */
-    uint8_t reg_control3 = 0x0F;
-    res = register_write(FUSB302_REGISTER_CONTROL3, &reg_control3);
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to enable automatic retransmission!");
-        return -EIO;
-    }
-
-    /* Flush RX fifo */
-    res = pd_rx_flush();
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to flush RX fifo!");
-        return res;
-    }
-
-    /* Flush TX fifo */
-    res = pd_tx_flush();
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to flush TX fifo!");
-        return res;
-    }
-
     /* Return success */
     return 0;
 }
@@ -590,6 +560,42 @@ int fusb302::autogoodcrc_enable(const bool enabled) {
     res = register_write(FUSB302_REGISTER_SWITCHES1, &reg_switches1);
     if (res < 0) {
         CONFIG_FUSB302_LOG_FUNCTION("Failed to write register!");
+        return -EIO;
+    }
+
+    /* Return success */
+    return 0;
+}
+
+/**
+ * @brief
+ * @param[in] retries The amount of times the fusb302 ic should retry to send a packet if a goodcrc was not received.
+ * @return 0 in case of success, or a negative error code otherwise.
+ */
+int fusb302::pd_autoretry_set(const int retries) {
+    int res;
+
+    /* Ensure argument is valid */
+    if ((retries < 0) || (retries > 3)) {
+        CONFIG_FUSB302_LOG_FUNCTION("Invalid number of retries!");
+        return -EINVAL;
+    }
+
+    /*  */
+    uint8_t reg_control3 = 0;
+    res = register_read(FUSB302_REGISTER_CONTROL3, &reg_control3);
+    if (res < 0) {
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to flush rx fifo!");
+        return -EIO;
+    }
+    reg_control3 &= 0xF8;
+    if (retries > 0) {
+        reg_control3 |= (retries << 1U);
+        reg_control3 |= 1U;
+    }
+    res = register_write(FUSB302_REGISTER_CONTROL3, &reg_control3);
+    if (res < 0) {
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to flush rx fifo!");
         return -EIO;
     }
 
