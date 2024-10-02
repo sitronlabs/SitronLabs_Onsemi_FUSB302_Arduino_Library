@@ -3,6 +3,7 @@
 
 /* Config */
 #define CONFIG_FUSB302_RX_QUEUE_SIZE 5  //!<
+#define CONFIG_FUSB302_I2C_ATTEMPTS 3   //!<
 #ifndef CONFIG_FUSB302_LOG_FUNCTION
 #define CONFIG_FUSB302_LOG_FUNCTION(...) (void)0  //!< Replace by { Serial.printf(__VA_ARGS__); Serial.println(); } to output on serial port
 #endif
@@ -776,12 +777,18 @@ int fusb302::pd_message_send(const struct usb_pd_message msg) {
     //     }
     // } while (1);
 
-    /* Flush tx fifo */
-    res = pd_tx_flush();
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to flush fifo!");
-        return -1;
-    }
+    // /* Return error if fifo is not empty */
+    // uint8_t reg_status1;
+    // res = register_read(FUSB302_REGISTER_STATUS1, &reg_status1);
+    // if (res != 0) {
+    //     CONFIG_FUSB302_LOG_FUNCTION("Failed to check tx fifo status!");
+    //     return -EIO;
+    // }
+    // if (((reg_status1 & (1U << 3U)) == 0) ||  // !TX_EMPTY || TX_FULL
+    //     ((reg_status1 & (1U << 2U)) != 0)) {
+    //     CONFIG_FUSB302_LOG_FUNCTION("Tx fifo is busy!");
+    //     return -EBUSY;
+    // }
 
     /* Prepare buffer */
     uint8_t buf[5 + 2 + 4 * 7 + 4] = {0};
@@ -813,13 +820,29 @@ int fusb302::pd_message_send(const struct usb_pd_message msg) {
     buf[len++] = FUSB302_TOKEN_TXOFF;
     buf[len++] = FUSB302_TOKEN_TXON;
 
-    /* Send buffer */
-    res = register_write(FUSB302_REGISTER_FIFOS, buf, len);
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to send message!");
-        return -EIO;
+    /* For some reason, in my current setup, I have noticed that sometimes the i2c layer will only report that two bytes have been sent
+     * So this retry mechanism is a workaround */
+    for (unsigned int i = 0; i < CONFIG_FUSB302_I2C_ATTEMPTS; i++) {
+
+        /* Flush tx fifo */
+        res = pd_tx_flush();
+        if (res < 0) {
+            CONFIG_FUSB302_LOG_FUNCTION("Failed to flush fifo, retrying...");
+            continue;
+        }
+
+        /* Send buffer */
+        res = register_write(FUSB302_REGISTER_FIFOS, buf, len);
+        if (res < 0) {
+            CONFIG_FUSB302_LOG_FUNCTION("Failed to send message, retrying...");
+            continue;
+        }
+
+        /* Return success */
+        return 0;
     }
 
-    /* Return success */
-    return 0;
+    /* Return error */
+    CONFIG_FUSB302_LOG_FUNCTION("Giving up!");
+    return -EIO;
 }
