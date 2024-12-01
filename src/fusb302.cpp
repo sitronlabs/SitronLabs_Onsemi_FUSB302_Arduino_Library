@@ -441,7 +441,7 @@ int fusb302::cc_orientation_set(const enum usb_typec_cc_orientation orientation)
         return -EINVAL;
     }
 
-    /* Set polarity for RX
+    /* Handle RX by setting MEAS_CC1 or MEAS_CC2
      * @note Interfers with DFP/SRC code */
     uint8_t reg_switches0;
     res = register_read(FUSB302_REGISTER_SWITCHES0, &reg_switches0);
@@ -460,7 +460,7 @@ int fusb302::cc_orientation_set(const enum usb_typec_cc_orientation orientation)
         return -EIO;
     }
 
-    /* Set polarity for TX */
+    /* Handle TX by setting TX_CC1 or TX_CC2 */
     uint8_t reg_switches1;
     res = register_read(FUSB302_REGISTER_SWITCHES1, &reg_switches1);
     if (res < 0) {
