@@ -15,7 +15,6 @@
  * @return
  */
 int fusb302::setup(TwoWire &i2c_library, const uint8_t i2c_address) {
-    int res;
 
     /* Save parameters */
     m_i2c_library = &i2c_library;
