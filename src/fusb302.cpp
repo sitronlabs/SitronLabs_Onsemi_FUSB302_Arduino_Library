@@ -535,6 +535,24 @@ int fusb302::vbus_measure(float &voltage_v) {
 }
 
 /**
+ * @brief
+ * @param
+ * @return
+ */
+int fusb302::pd_reset(void) {
+
+    /* Reset the pd logic */
+    uint8_t reg_reset = 0b00000010;
+    int res = register_write(FUSB302_REGISTER_RESET, &reg_reset);
+    if (res < 0) {
+        return -EIO;
+    }
+
+    /* Return success */
+    return 0;
+}
+
+/**
  *
  * @param[in] enabled
  * @return 0 in case of success, or a negative error code otherwise.
