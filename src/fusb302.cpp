@@ -483,9 +483,9 @@ int fusb302::cc_orientation_set(const enum usb_typec_cc_orientation orientation)
 }
 
 /**
- *
- * @param[out] voltage_v
- * @return 0 in case of success, or a negative error code otherwise.
+ * Measures the VBUS voltage using the internal comparator and MDAC.
+ * @param[out] voltage_v The measured VBUS voltage (in volts).
+ * @return 0 in case of success, or other negative error code otherwise.
  */
 int fusb302::vbus_measure(float &voltage_v) {
     int res;
@@ -502,17 +502,22 @@ int fusb302::vbus_measure(float &voltage_v) {
         return -EIO;
     }
 
-    /* Iterate over all 6-bit values of the comparator
-     * @note This is quite inefficient, and should probably rewritten to make use of a binary search algorithm */
-    voltage_v = 0;
-    for (uint8_t i = 0; i < 64; i++) {
+    /* Binary search through MDAC values (0-63) */
+    int code_left = 0;
+    int code_right = 63;
+    int code_lower_last = -1;
+    while (code_left <= code_right) {
+        int code_mid = (code_left + code_right) / 2;
 
         /* Set MEAS_VBUS bit and MDAC value */
-        uint8_t reg_measure = (1 << 6) | i;
+        uint8_t reg_measure = (1 << 6) | code_mid;
         res = register_write(FUSB302_REGISTER_MEASURE, &reg_measure);
         if (res < 0) {
             return -EIO;
         }
+
+        /* Small delay to allow comparator to settle */
+        delayMicroseconds(100);
 
         /* Look at COMP bit */
         uint8_t reg_status0;
@@ -521,15 +526,25 @@ int fusb302::vbus_measure(float &voltage_v) {
             return -EIO;
         }
 
-        /* Return when transition found */
-        if ((reg_status0 & (1 << 5)) == 0x00) {
-            voltage_v = (i + 0.5) * 0.420;
-            return 0;
+        /* Look at COMP bit. If set, it means the measured voltage is higher than the one outputed by the DAC */
+        if ((reg_status0 & (1 << 5)) == 0) {
+            code_right = code_mid - 1;
+        } else {
+            code_lower_last = code_mid;
+            code_left = code_mid + 1;
         }
     }
 
-    /* Return when out of range */
-    voltage_v = 26.88;
+    /* Calculate voltage based on transition point
+     * Each MDAC step is 0.42V, add 0.5 steps for better accuracy
+     * If no transition found, voltage is below minimum measurable */
+    if (code_lower_last >= 0) {
+        voltage_v = (code_lower_last + 0.5) * 0.420;
+    } else {
+        voltage_v = 0.0;
+    }
+
+    /* Return success */
     return 0;
 }
 
