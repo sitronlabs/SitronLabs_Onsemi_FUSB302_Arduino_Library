@@ -9,10 +9,14 @@
 #endif
 
 /**
+ * @brief Initializes the FUSB302 device with the specified I2C configuration.
  *
- * @param[in] i2c_library
- * @param[in] i2c_address
- * @return
+ * Sets up the I2C communication interface for the FUSB302 device by storing the provided
+ * I2C library instance and device address for future use.
+ *
+ * @param[in] i2c_library Reference to the TwoWire I2C library instance to use for communication
+ * @param[in] i2c_address The 7-bit I2C address of the FUSB302 device
+ * @return 0 on successful initialization, or a negative error code otherwise
  */
 int fusb302::setup(TwoWire &i2c_library, const uint8_t i2c_address) {
 
@@ -67,9 +71,13 @@ int fusb302::reset(void) {
 }
 
 /**
- * @brief
- * @param[in] on
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Controls the power state of the FUSB302 device.
+ *
+ * When powered on, all internal blocks are enabled. When powered off,
+ * all internal blocks are disabled to minimize power consumption.
+ *
+ * @param[in] on true to power on the device, false to power off
+ * @return 0 on successful power state change, or a negative error code otherwise
  */
 int fusb302::power_set(const bool on) {
 
@@ -85,11 +93,17 @@ int fusb302::power_set(const bool on) {
 }
 
 /**
- * Reads the contents of the given register.
- * @param[in] address The address of the register.
- * @param[out] content A pointer to a variable that will be updated with the contents of the register.
- * @param[in] count
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Reads data from one or more FUSB302 registers.
+ *
+ * Performs a complete I2C read transaction including:
+ * - Sending register address
+ * - Reading requested number of bytes
+ * - Validating received data length
+ *
+ * @param[in] address The starting register address to read from
+ * @param[out] content Pointer to buffer where read data will be stored
+ * @param[in] count Number of registers to read (defaults to 1)
+ * @return 0 on successful read, or a negative error code otherwise
  */
 int fusb302::register_read(const enum fusb302_register address, uint8_t *const content, const size_t count) {
 
@@ -106,7 +120,7 @@ int fusb302::register_read(const enum fusb302_register address, uint8_t *const c
     }
 
     /* Read data */
-    m_i2c_library->requestFrom(m_i2c_address, (uint8_t)count, (uint8_t) true);
+    m_i2c_library->requestFrom(m_i2c_address, (uint8_t)count, (uint8_t)true);
     if (m_i2c_library->available() != ((int)count)) {
         return -EIO;
     }
@@ -119,13 +133,20 @@ int fusb302::register_read(const enum fusb302_register address, uint8_t *const c
 }
 
 /**
- * Updates the content of the given register.
- * @param[in] reg_address The address of the register.
- * @param[in] reg_content The new content of the register.
- * @param[in] count
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Writes data to one or more FUSB302 registers.
+ *
+ * Performs a complete I2C write transaction including:
+ * - Sending register address
+ * - Writing provided data
+ * - Verifying transaction completion
+ *
+ * @param[in] address The starting register address to write to
+ * @param[in] content Pointer to buffer containing data to write
+ * @param[in] count Number of registers to write (defaults to 1)
+ * @return 0 on successful write, or a negative error code otherwise
  */
 int fusb302::register_write(const enum fusb302_register address, const uint8_t *const content, const size_t count) {
+    int res;
 
     /* Ensure library has been configured */
     if (m_i2c_library == NULL) {
@@ -136,7 +157,9 @@ int fusb302::register_write(const enum fusb302_register address, const uint8_t *
     m_i2c_library->beginTransmission(m_i2c_address);
     m_i2c_library->write((uint8_t)address);
     m_i2c_library->write(content, count);
-    if (m_i2c_library->endTransmission(true) != 0) {
+    res = m_i2c_library->endTransmission(true);
+    if (res != 0) {
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to write (%d)!", res);
         return -EIO;
     }
 
@@ -145,9 +168,14 @@ int fusb302::register_write(const enum fusb302_register address, const uint8_t *
 }
 
 /**
- * @brief Presents Rd resistors on both CC lines.
- * @note This is the power-on default for the FUSB302B but not for the FUSB302T.
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Configures the FUSB302 to present Rd (pull-down) resistors on both CC pins.
+ *
+ * This function:
+ * - Disables pull-up resistors (PU_EN1 and PU_EN2)
+ * - Enables pull-down resistors (PDWN1 and PDWN2)
+
+ * @note This is the power-on default for FUSB302B but not for FUSB302T
+ * @return 0 on successful configuration, or a negative error code otherwise
  */
 int fusb302::cc_pull_down(void) {
     int res;
@@ -171,9 +199,20 @@ int fusb302::cc_pull_down(void) {
 }
 
 /**
- * @brief Presents Rp resistors on both CC lines.
- * @param[in] status The value of the Rp resistors to select with current is advertised.
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Configures the FUSB302 to present Rp (pull-up) resistors on both CC pins.
+ *
+ * This function:
+ * - Disables pull-down resistors (PDWN1 and PDWN2)
+ * - Sets the HOST_CUR value based on desired current level
+ * - Enables pull-up resistors (PU_EN1 and PU_EN2)
+ *
+ * The status parameter must be one of:
+ * - USB_TYPEC_CC_STATUS_RP_DEF
+ * - USB_TYPEC_CC_STATUS_RP_1_5
+ * - USB_TYPEC_CC_STATUS_RP_3_0
+ *
+ * @param[in] status The current level to advertise via the Rp resistors
+ * @return 0 on successful configuration, or a negative error code otherwise
  */
 int fusb302::cc_pull_up(const enum usb_typec_cc_status status) {
     int res;
@@ -228,10 +267,15 @@ int fusb302::cc_pull_up(const enum usb_typec_cc_status status) {
 }
 
 /**
- * @brief
- * @param
- * @param
- * @return
+ * @brief Measures the voltage levels on both CC pins to determine their status.
+ *
+ * This function performs different measurements based on whether Rd pull-down
+ * or Rp pull-up resistors are enabled. For Rd mode, it measures voltage levels
+ * to detect Rp advertisement. For Rp mode, it uses the comparator to detect Rd.
+ *
+ * @param[out] cc1 Reference to store the status of CC1 pin
+ * @param[out] cc2 Reference to store the status of CC2 pin
+ * @return 0 on successful measurement, or a negative error code otherwise
  * @see https://github.com/graycatlabs/usb-c-arduino/blob/master/usb-c-demo/FUSB302.c#L97
  */
 int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status &cc2) {
@@ -271,7 +315,8 @@ int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status 
             return -EIO;
         }
 
-        /* Wait for at least 250 microseconds */
+        /* Wait for at least 250 microseconds
+         * @todo Doccument where this number comes from */
         delayMicroseconds(250);
 
         /* Read measured cc1 voltage */
@@ -302,7 +347,8 @@ int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status 
             return -EIO;
         }
 
-        /* Wait for at least 250 microseconds */
+        /* Wait for at least 250 microseconds
+         * @todo Doccument where this number comes from */
         delayMicroseconds(250);
 
         /* Read cc2 voltage */
@@ -367,7 +413,8 @@ int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status 
             return -EIO;
         }
 
-        /* Wait for at least 250 microseconds */
+        /* Wait for at least 250 microseconds
+         * @todo Doccument where this number comes from */
         delayMicroseconds(250);
 
         /* Look at COMP bit */
@@ -394,7 +441,8 @@ int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status 
             return -EIO;
         }
 
-        /* Wait for at least 250 microseconds */
+        /* Wait for at least 250 microseconds
+         * @todo Doccument where this number comes from */
         delayMicroseconds(250);
 
         /* Look at COMP bit */
@@ -430,7 +478,18 @@ int fusb302::cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status 
 }
 
 /**
+ * @brief Configures the FUSB302 for a specific USB Type-C cable orientation.
  *
+ * This function:
+ * - Configures RX by setting appropriate MEAS_CC1 or MEAS_CC2 bits
+ * - Configures TX by setting appropriate TX_CC1 or TX_CC2 bits
+ * - May interfere with DFP/SRC functionality
+ *
+ * The orientation parameter must be either USB_TYPEC_CC_ORIENTATION_NORMAL
+ * or USB_TYPEC_CC_ORIENTATION_REVERSE.
+ *
+ * @param[in] orientation The cable orientation to configure (normal or reversed)
+ * @return 0 on successful configuration, or a negative error code otherwise
  */
 int fusb302::cc_orientation_set(const enum usb_typec_cc_orientation orientation) {
     int res;
@@ -549,9 +608,13 @@ int fusb302::vbus_measure(float &voltage_v) {
 }
 
 /**
- * @brief
- * @param
- * @return
+ * @brief Resets the USB Power Delivery logic of the FUSB302.
+ *
+ * Performs a soft reset of only the PD logic block, leaving other device
+ * functionality unaffected. This is useful for recovering from protocol
+ * errors or reinitializing PD communication.
+ *
+ * @return 0 on successful reset, or a negative error code otherwise
  */
 int fusb302::pd_reset(void) {
 
@@ -567,9 +630,14 @@ int fusb302::pd_reset(void) {
 }
 
 /**
+ * @brief Enables or disables automatic GoodCRC response for received USB PD messages.
  *
- * @param[in] enabled
- * @return 0 in case of success, or a negative error code otherwise.
+ * When enabled, the FUSB302 will automatically send a GoodCRC message in
+ * response to any valid received PD message. This is required for normal
+ * USB PD operation according to the specification.
+ *
+ * @param[in] enabled true to enable automatic GoodCRC response, false to disable
+ * @return 0 on successful configuration, or a negative error code otherwise
  */
 int fusb302::pd_autogoodcrc_set(const bool enabled) {
     int res;
@@ -601,9 +669,16 @@ int fusb302::pd_autogoodcrc_set(const bool enabled) {
 }
 
 /**
- * @brief
- * @param[in] retries The amount of times the fusb302 ic should retry to send a packet if a goodcrc was not received.
- * @return 0 in case of success, or a negative error code otherwise.
+ * @brief Configures automatic retry behavior for USB PD message transmission.
+ *
+ * This function configures how many times the FUSB302 will automatically
+ * retry sending a message if no GoodCRC response is received. Setting
+ * retries to 0 disables automatic retries.
+ *
+ * The retries parameter must be between 0 and 3 inclusive.
+ *
+ * @param[in] retries Number of retry attempts (0-3) for message transmission
+ * @return 0 on successful configuration, or a negative error code otherwise
  */
 int fusb302::pd_autoretry_set(const int retries) {
     int res;
@@ -637,8 +712,13 @@ int fusb302::pd_autoretry_set(const int retries) {
 }
 
 /**
+ * @brief Flushes the USB PD receive FIFO buffer.
  *
- * @return
+ * Clears any pending received messages from the RX FIFO and waits for
+ * the clear operation to complete. A timeout mechanism should be
+ * implemented in future versions.
+ *
+ * @return 0 on successful flush operation, or a negative error code otherwise
  */
 int fusb302::pd_rx_flush(void) {
     int res;
@@ -675,8 +755,13 @@ int fusb302::pd_rx_flush(void) {
 }
 
 /**
+ * @brief Flushes the USB PD transmit FIFO buffer.
  *
- * @return
+ * Clears any pending messages from the TX FIFO and waits for the clear
+ * operation to complete. A timeout mechanism should be implemented in
+ * future versions.
+ *
+ * @return 0 on successful flush operation, or a negative error code otherwise
  */
 int fusb302::pd_tx_flush(void) {
     int res;
@@ -713,9 +798,18 @@ int fusb302::pd_tx_flush(void) {
 }
 
 /**
- * Tries to receive a message.
- * @param[out] msg A power delivery message structure.
- * @return 1 if a message was successfully received, 0 if no message was received, or a negative error code otherwise.
+ * @brief Attempts to receive a USB Power Delivery message from the FUSB302.
+ *
+ * This function:
+ * - Checks if data is available in the RX FIFO
+ * - Validates the SOP sequence
+ * - Extracts and parses the message header
+ * - Retrieves the message payload if present
+ *
+ * @param[out] msg Reference to a power delivery message structure where the received message will be stored
+ * @return 1 if a message was successfully received
+ *         0 if no message was available to receive
+ *         negative error code if an error occurred during reception
  */
 int fusb302::pd_message_receive(struct usb_pd_message &msg) {
     int res;
@@ -781,11 +875,18 @@ int fusb302::pd_message_receive(struct usb_pd_message &msg) {
 }
 
 /**
+ * @brief Sends a USB Power Delivery message through the FUSB302.
  *
- * @param[out] msg A power delivery message structure.
- * @return 0 if the message was successfully sent, or a negative error code otherwise.
- * @see Section 5.6 of the USB Power Delivery Specification Revision 3.0, Version 1.1.
- * @see Table 29 of the FUSB302 datasheet, Revision 2.
+ * This function handles the complete message transmission process including:
+ * - Adding SOP sequence
+ * - Formatting header and payload
+ * - Adding CRC and EOP sequence
+ * - Retrying on transmission failures
+ *
+ * @param[in] msg The power delivery message structure to send
+ * @return 0 if the message was successfully sent, or a negative error code otherwise
+ * @see Section 5.6 of the USB Power Delivery Specification Revision 3.0, Version 1.1
+ * @see Table 29 of the FUSB302 datasheet, Revision 2
  */
 int fusb302::pd_message_send(const struct usb_pd_message msg) {
     int res;
