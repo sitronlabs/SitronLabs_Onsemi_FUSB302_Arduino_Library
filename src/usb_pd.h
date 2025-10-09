@@ -17,6 +17,17 @@ enum usb_pd_protocol_revision {
 };
 
 /**
+ * List of possible destinations.
+ * @see Table 6-4 Destination.
+ */
+enum usb_pd_sop_type {
+    USB_PD_SOP_TYPE_DEFAULT,       //!< SOP. Used for regular PD messages like capabilities exchange, power requests, etc.
+    USB_PD_SOP_TYPE_PRIME,         //!< SOP'. Used for reading cable identity (e.g. electronically marked cable info, VCONN management)
+    USB_PD_SOP_TYPE_PRIME_DOUBLE,  //!< SOP''. Used for same kind of things as SOP', but for the opposite end of the cable.
+    USB_PD_SOP_TYPE_UNKNOWN,       //!< Unknown SOP type
+};
+
+/**
  * List of possible messages.
  * @see Table 6-5 Control Message Types.
  * @see Table 6-6 Data Message Types.
@@ -64,13 +75,20 @@ struct usb_pd_pdo {
 };
 
 /**
+ * USB Power Delivery message structure.
  *
+ * This structure represents a complete USB PD message including:
+ * - SOP type (destination: device, cable plug prime, or cable plug double prime)
+ * - Message header containing message type, data role, power role, etc.
+ * - Optional data objects (up to 7 objects)
+ *
+ * @see Section 6.2 of the USB Power Delivery Specification
  */
 struct usb_pd_message {
-    uint16_t address;
-    uint16_t header;
-    uint32_t objects[7];
-    uint8_t object_count;
+    enum usb_pd_sop_type sop_type = USB_PD_SOP_TYPE_DEFAULT;  //!< Message destination type
+    uint16_t header = 0;                                      //!< 16-bit message header
+    uint32_t objects[7] = {0};                                //!< Data objects (PDOs or VDOs)
+    uint8_t object_count = 0;                                 //!< Number of data objects (0-7)
 };
 
 #endif

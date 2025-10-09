@@ -802,7 +802,7 @@ int fusb302::pd_tx_flush(void) {
  *
  * This function:
  * - Checks if data is available in the RX FIFO
- * - Validates the SOP sequence
+ * - Reads the SOP type
  * - Extracts and parses the message header
  * - Retrieves the message payload if present
  *
@@ -828,28 +828,26 @@ int fusb302::pd_message_receive(struct usb_pd_message &msg) {
         return 0;
     }
 
-    /* Read one byte to determine the destination of the message */
-    res = register_read(FUSB302_REGISTER_FIFOS, &buf[0]);
+    /* Read the first three bytes to extract the sop and the header */
+    res = register_read(FUSB302_REGISTER_FIFOS, &buf[0], 3);
     if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to read destination from fifo!");
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to read sop and header from fifo!");
         return -EIO;
     }
 
-    /* Discard the message if the destination is not sop */
-    if ((buf[0] & 0xE0) != 0xE0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Dropping non sop message.");
-        return 0;
-    }
-
-    /* Read two bytes to retrieve the header */
-    res = register_read(FUSB302_REGISTER_FIFOS, &buf[0], 2);
-    if (res < 0) {
-        CONFIG_FUSB302_LOG_FUNCTION("Failed to read header from fifo!");
-        return -EIO;
+    /* Determine the type of sop */
+    if ((buf[0] & 0xE0) == 0xE0) {
+        msg.sop_type = USB_PD_SOP_TYPE_DEFAULT;
+    } else if ((buf[0] & 0xE0) == 0xC0) {
+        msg.sop_type = USB_PD_SOP_TYPE_PRIME;
+    } else if ((buf[0] & 0xE0) == 0xA0) {
+        msg.sop_type = USB_PD_SOP_TYPE_PRIME_DOUBLE;
+    } else {
+        msg.sop_type = USB_PD_SOP_TYPE_UNKNOWN;
     }
 
     /* Parse header */
-    msg.header = (buf[1] << 8) | (buf[0] << 0);
+    msg.header = (buf[2] << 8) | (buf[1] << 0);
     msg.object_count = (msg.header & 0x7000) >> 12;
 
     /* Read the payload */
@@ -878,7 +876,7 @@ int fusb302::pd_message_receive(struct usb_pd_message &msg) {
  * @brief Sends a USB Power Delivery message through the FUSB302.
  *
  * This function handles the complete message transmission process including:
- * - Adding SOP sequence
+ * - Adding SOP sequence (supports SOP, SOP', and SOP'' based on msg.sop_type)
  * - Formatting header and payload
  * - Adding CRC and EOP sequence
  * - Retrying on transmission failures
@@ -928,10 +926,33 @@ int fusb302::pd_message_send(const struct usb_pd_message msg) {
     uint8_t len = 0;
 
     /* Append start of packet sequence */
-    buf[len++] = FUSB302_TOKEN_SYNC1;
-    buf[len++] = FUSB302_TOKEN_SYNC1;
-    buf[len++] = FUSB302_TOKEN_SYNC1;
-    buf[len++] = FUSB302_TOKEN_SYNC2;
+    switch (msg.sop_type) {
+        case USB_PD_SOP_TYPE_DEFAULT: {
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC2;
+            break;
+        }
+        case USB_PD_SOP_TYPE_PRIME: {
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC3;
+            buf[len++] = FUSB302_TOKEN_SYNC3;
+            break;
+        }
+        case USB_PD_SOP_TYPE_PRIME_DOUBLE: {
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC3;
+            buf[len++] = FUSB302_TOKEN_SYNC1;
+            buf[len++] = FUSB302_TOKEN_SYNC3;
+            break;
+        }
+        default: {
+            CONFIG_FUSB302_LOG_FUNCTION("Invalid SOP type!");
+            return -EINVAL;
+        }
+    }
 
     /* Append payload */
     uint16_t header = msg.header;
