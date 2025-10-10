@@ -543,19 +543,30 @@ int fusb302::cc_orientation_set(const enum usb_typec_cc_orientation orientation)
 
 /**
  * Measures the VBUS voltage using the internal comparator and MDAC.
+ *
+ * This function temporarily modifies the SWITCHES0 register to disable CC measurements,
+ * performs the VBUS measurement, then restores the original register state.
+ *
  * @param[out] voltage_v The measured VBUS voltage (in volts).
  * @return 0 in case of success, or other negative error code otherwise.
  */
 int fusb302::vbus_measure(float &voltage_v) {
     int res;
 
-    /* Disable MEAS_CC */
-    uint8_t reg_switches0;
-    res = register_read(FUSB302_REGISTER_SWITCHES0, &reg_switches0);
+    /* Backup registers */
+    uint8_t reg_switches0_before;
+    res = register_read(FUSB302_REGISTER_SWITCHES0, &reg_switches0_before);
     if (res < 0) {
         return -EIO;
     }
-    reg_switches0 &= 0xF3;
+    uint8_t reg_measure_before;
+    res = register_read(FUSB302_REGISTER_MEASURE, &reg_measure_before);
+    if (res < 0) {
+        return -EIO;
+    }
+
+    /* Disable MEAS_CC */
+    uint8_t reg_switches0 = reg_switches0_before & 0xF3;
     res = register_write(FUSB302_REGISTER_SWITCHES0, &reg_switches0);
     if (res < 0) {
         return -EIO;
@@ -601,6 +612,16 @@ int fusb302::vbus_measure(float &voltage_v) {
         voltage_v = (code_lower_last + 0.5) * 0.420;
     } else {
         voltage_v = 0.0;
+    }
+
+    /* Restore registers */
+    res = register_write(FUSB302_REGISTER_SWITCHES0, &reg_switches0_before);
+    if (res < 0) {
+        return -EIO;
+    }
+    res = register_write(FUSB302_REGISTER_MEASURE, &reg_measure_before);
+    if (res < 0) {
+        return -EIO;
     }
 
     /* Return success */
