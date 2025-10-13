@@ -1,6 +1,6 @@
 # Sitron Labs FUSB302 Arduino Library
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library)
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.txt)
 [![Arduino](https://img.shields.io/badge/Arduino-Compatible-orange.svg)](https://www.arduino.cc/)
 [![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-blue.svg)](https://platformio.org/)
