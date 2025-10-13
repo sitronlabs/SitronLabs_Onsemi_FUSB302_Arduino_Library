@@ -637,12 +637,39 @@ int fusb302::vbus_measure(float &voltage_v) {
  *
  * @return 0 on successful reset, or a negative error code otherwise
  */
-int fusb302::pd_reset(void) {
+int fusb302::pd_reset_logic(void) {
 
     /* Reset the pd logic */
     uint8_t reg_reset = 0b00000010;
     int res = register_write(FUSB302_REGISTER_RESET, &reg_reset);
     if (res < 0) {
+        return -EIO;
+    }
+
+    /* Return success */
+    return 0;
+}
+
+/**
+ * @brief Sends a USB Power Delivery Hard Reset sequence.
+ *
+ * @return 0 on successful transmission, or a negative error code otherwise
+ * @see Section 6.6.3.3 of the USB Power Delivery Specification
+ */
+int fusb302::pd_reset_hard(void) {
+    int res;
+
+    /* Set hard reset bit */
+    uint8_t reg_control3 = 0;
+    res = register_read(FUSB302_REGISTER_CONTROL3, &reg_control3);
+    if (res < 0) {
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to read register!");
+        return -EIO;
+    }
+    reg_control3 |= (1 << 6);
+    res = register_write(FUSB302_REGISTER_CONTROL3, &reg_control3);
+    if (res < 0) {
+        CONFIG_FUSB302_LOG_FUNCTION("Failed to write register!");
         return -EIO;
     }
 

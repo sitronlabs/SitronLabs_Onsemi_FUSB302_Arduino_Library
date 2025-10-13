@@ -10,7 +10,8 @@ cc_pull_up	KEYWORD2
 cc_measure	KEYWORD2
 cc_orientation_set	KEYWORD2
 vbus_measure	KEYWORD2
-pd_reset	KEYWORD2
+pd_reset_logic	KEYWORD2
+pd_reset_hard	KEYWORD2
 pd_autogoodcrc_set	KEYWORD2
 pd_autoretry_set	KEYWORD2
 pd_rx_flush	KEYWORD2

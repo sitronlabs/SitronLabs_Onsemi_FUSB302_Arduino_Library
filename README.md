@@ -11,6 +11,7 @@ A professional, easy-to-use Arduino library for the Onsemi FUSB302 USB Type-C Po
 
 - **USB Type-C Detection**: Automatic cable orientation detection (normal/flipped)
 - **Power Delivery Support**: Full USB PD message transmission and reception
+- **PD Hard Reset**: Send hard reset messages to force PD state machine reset
 - **VBUS Monitoring**: Accurate voltage measurement (0-22V range)
 - **Multiple SOP Types**: Support for SOP, SOP', and SOP'' messaging
 - **Flexible Configuration**: CC pin configuration for source and sink modes

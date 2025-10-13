@@ -207,7 +207,13 @@ class fusb302 {
      * Call this before starting PD communication
      * @return 0 on success, negative error code on failure
      */
-    int pd_reset(void);
+    int pd_reset_logic(void);
+
+    /**
+     * Send a USB Power Delivery Hard Reset sequence
+     * @return 0 on success, negative error code on failure
+     */
+    int pd_reset_hard(void);
 
     /**
      * Enable/disable automatic GoodCRC message responses
