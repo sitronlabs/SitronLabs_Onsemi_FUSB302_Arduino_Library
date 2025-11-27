@@ -1,253 +1,341 @@
-# Sitron Labs FUSB302 Arduino Library
+[![Designed by Sitron Labs](https://img.shields.io/badge/Designed_by-Sitron_Labs-FCE477.svg)](https://www.sitronlabs.com/)
+[![Join the Discord community](https://img.shields.io/discord/552242187665145866.svg?logo=discord&logoColor=white&label=Discord&color=%237289da)](https://discord.gg/btnVDeWhfW)
+[![PayPal Donate](https://img.shields.io/badge/PayPal-Donate-00457C.svg?logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=QLX8VU9Q3PFFL)
+![License](https://img.shields.io/github/license/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library.svg)
+![Latest Release](https://img.shields.io/github/release/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library.svg)
+[![Arduino Library Manager](https://www.ardu-badge.com/badge/Sitron%20Labs%20FUSB302%20Arduino%20Library.svg)](https://www.ardu-badge.com/Sitron%20Labs%20FUSB302%20Arduino%20Library)
+[![PlatformIO Registry](https://badges.registry.platformio.org/packages/sitronlabs/library/Sitron_Labs_FUSB302_Arduino_Library.svg)](https://registry.platformio.org/libraries/sitronlabs/Sitron_Labs_FUSB302_Arduino_Library)
 
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)](https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE.txt)
-[![Arduino](https://img.shields.io/badge/Arduino-Compatible-orange.svg)](https://www.arduino.cc/)
-[![PlatformIO](https://img.shields.io/badge/PlatformIO-Compatible-blue.svg)](https://platformio.org/)
+# Sitron Labs Onsemi FUSB302 Arduino Library
 
-A professional, easy-to-use Arduino library for the Onsemi FUSB302 USB Type-C Port Controller. This library provides comprehensive support for USB Type-C cable detection, orientation sensing, VBUS voltage monitoring, and USB Power Delivery protocol communication.
+Arduino library for interfacing with the Onsemi FUSB302 USB Type-C Port Controller.
 
-## Features
+## Description
 
-- **USB Type-C Detection**: Automatic cable orientation detection (normal/flipped)
-- **Power Delivery Support**: Full USB PD message transmission and reception
-- **PD Hard Reset**: Send hard reset messages to force PD state machine reset
-- **VBUS Monitoring**: Accurate voltage measurement (0-22V range)
-- **Multiple SOP Types**: Support for SOP, SOP', and SOP'' messaging
-- **Flexible Configuration**: CC pin configuration for source and sink modes
-- **I2C Communication**: Simple I2C interface (typically at 0x22)
-- **Comprehensive Examples**: Detailed example sketches included
-- **Professional Documentation**: Extensive inline documentation and Doxygen support
-- **Error Handling**: Robust error checking and reporting
-- **Maker-Friendly**: Designed with ease of use and learning in mind
-
-## Supported Devices
-
-| Device | Description |
-|--------|-------------|
-| FUSB302B | Programmable USB Type-C Controller with PD (Default SNK) |
-| FUSB302T | Programmable USB Type-C Controller with PD (Default SRC) |
+The FUSB302 is a programmable USB Type-C controller with USB Power Delivery support. It can detect USB Type-C cable orientation, measure VBUS voltage, and handle USB Power Delivery protocol communication. This library provides a simple interface to access these features via I2C, supporting both FUSB302B (default sink) and FUSB302T (default source) variants.
 
 ## Installation
 
-### Arduino IDE Library Manager
-1. Open Arduino IDE
-2. Go to **Tools** → **Manage Libraries**
-3. Search for "SitronLabs FUSB302"
-4. Click **Install**
+### Arduino IDE
+
+Install via the Arduino Library Manager by searching for "Sitron Labs FUSB302".
+
+Alternatively, install manually:
+1. Download or clone this repository
+2. Place it in your Arduino `libraries` folder
+3. Restart the Arduino IDE
 
 ### PlatformIO
-Add to your `platformio.ini`:
+
+Install via the PlatformIO Library Manager by searching for "Sitron Labs FUSB302".
+
+Alternatively, add the library manually to your `platformio.ini` file:
+
 ```ini
 lib_deps = 
-    sitronlabs/SitronLabs_FUSB302_Arduino_Library
-```
-
-### Manual Installation
-1. Download the latest release from [GitHub](https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library/releases)
-2. Extract the ZIP file
-3. Copy the `SitronLabs_Onsemi_FUSB302_Arduino_Library` folder to your Arduino `libraries` directory
-4. Restart Arduino IDE
-
-## Quick Start
-
-### Basic Cable Detection Example
-```cpp
-#include <Wire.h>
-#include <fusb302.h>
-
-fusb302 usb_controller;
-
-void setup() {
-    Serial.begin(115200);
-    Wire.begin();
-    
-    /* Initialize FUSB302 at I2C address 0x22 */
-    usb_controller.setup(Wire, 0x22);
-    
-    if (!usb_controller.detect()) {
-        Serial.println("FUSB302 not found!");
-        while(1);
-    }
-    
-    usb_controller.power_set(true);
-    Serial.println("FUSB302 ready!");
-}
-
-void loop() {
-    /* Read CC pins to detect cable orientation */
-    enum usb_typec_cc_status cc1, cc2;
-    usb_controller.cc_measure(cc1, cc2);
-    
-    if (cc1 > USB_TYPEC_CC_STATUS_OPEN && cc2 == USB_TYPEC_CC_STATUS_OPEN) {
-        Serial.println("Cable: Normal orientation");
-    } 
-    else if (cc1 == USB_TYPEC_CC_STATUS_OPEN && cc2 > USB_TYPEC_CC_STATUS_OPEN) {
-        Serial.println("Cable: Flipped orientation");
-    }
-    
-    delay(1000);
-}
-```
-
-### VBUS Voltage Monitoring
-```cpp
-void loop() {
-    float voltage;
-    if (usb_controller.vbus_measure(voltage) == 0) {
-        Serial.print("VBUS: ");
-        Serial.print(voltage, 2);
-        Serial.println(" V");
-    }
-    delay(1000);
-}
+    https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library.git
 ```
 
 ## Hardware Connections
 
-### Basic I2C Connection
-| FUSB302 Pin | Arduino Pin | Description |
-|-------------|-------------|-------------|
-| VDD | 3.3V | Power supply (3.3V only!) |
-| GND | GND | Ground |
-| SDA | SDA | I2C data line (4.7kΩ pull-up) |
-| SCL | SCL | I2C clock line (4.7kΩ pull-up) |
-| CC1 | USB-C CC1 | Configuration channel 1 |
-| CC2 | USB-C CC2 | Configuration channel 2 |
-| VBUS | USB-C VBUS | USB power line (up to 20V) |
-| INT | Digital pin | Interrupt (optional) |
+Connect the FUSB302 to your Arduino using I2C:
 
-### Important Notes
-- **Voltage**: FUSB302 operates at 3.3V only. Use level shifters with 5V Arduino boards.
-- **Pull-ups**: I2C lines require 4.7kΩ pull-up resistors to 3.3V.
-- **VBUS**: Can measure 0-22V directly. Use voltage divider for higher voltages.
+- VDD → 3.3V or 5.0V
+- GND → GND
+- SDA → SDA (I2C Data, requires 4.7kΩ pull-up to VDD)
+- SCL → SCL (I2C Clock, requires 4.7kΩ pull-up to VDD)
+- CC1 → USB Type-C connector CC1 pin
+- CC2 → USB Type-C connector CC2 pin
+- VBUS → USB Type-C connector VBUS pin (up to 20V)
+- INT → Any digital pin (optional, for interrupts)
 
-### I2C Address Configuration
-| Device | Default Address |
-|--------|----------------|
-| FUSB302BMPX | 0x22 |
-| FUSB302TMPX | 0x22 or 0x23 (configurable) |
+**Important Notes:**
+- The FUSB302 can operate at 3.3V or 5.0V. I2C pull-up resistors should be connected to the same voltage as VDD.
+- I2C lines require 4.7kΩ pull-up resistors to VDD.
+- The default I2C address is 0x22 (FUSB302BMPX) or 0x22/0x23 (FUSB302TMPX, configurable).
+
+## Usage
+
+### Basic Cable Detection
+
+```cpp
+#include <Wire.h>
+#include <fusb302.h>
+
+// Create FUSB302 device object
+fusb302 usb_controller;
+
+// I2C address (typically 0x22)
+const uint8_t I2C_ADDRESS = 0x22;
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize I2C
+  Wire.begin();
+  
+  // Setup the FUSB302 (I2C library, I2C address)
+  if (usb_controller.setup(Wire, I2C_ADDRESS) != 0) {
+    Serial.println("Failed to setup FUSB302");
+    return;
+  }
+  
+  // Detect the device
+  if (!usb_controller.detect()) {
+    Serial.println("FUSB302 not detected");
+    return;
+  }
+  
+  // Power on the device
+  usb_controller.power_set(true);
+  
+  // Configure CC pins as pull-down (for acting as device/sink)
+  usb_controller.cc_pull_down();
+  
+  Serial.println("FUSB302 initialized");
+}
+
+void loop() {
+  // Measure CC pins to detect cable orientation
+  enum usb_typec_cc_status cc1, cc2;
+  if (usb_controller.cc_measure(cc1, cc2) == 0) {
+    if (cc1 > USB_TYPEC_CC_STATUS_OPEN && cc2 == USB_TYPEC_CC_STATUS_OPEN) {
+      Serial.println("Cable: Normal orientation");
+      usb_controller.cc_orientation_set(USB_TYPEC_CC_ORIENTATION_NORMAL);
+    } else if (cc1 == USB_TYPEC_CC_STATUS_OPEN && cc2 > USB_TYPEC_CC_STATUS_OPEN) {
+      Serial.println("Cable: Flipped orientation");
+      usb_controller.cc_orientation_set(USB_TYPEC_CC_ORIENTATION_REVERSE);
+    } else {
+      Serial.println("No cable detected");
+    }
+  }
+  
+  delay(1000);
+}
+```
+
+### VBUS Voltage Monitoring
+
+```cpp
+void loop() {
+  float voltage;
+  if (usb_controller.vbus_measure(voltage) == 0) {
+    Serial.print("VBUS: ");
+    Serial.print(voltage, 2);
+    Serial.println(" V");
+  }
+  delay(1000);
+}
+```
+
+### USB Power Delivery Communication
+
+```cpp
+#include <Wire.h>
+#include <fusb302.h>
+#include <usb_pd.h>
+
+fusb302 usb_controller;
+const uint8_t I2C_ADDRESS = 0x22;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+  
+  usb_controller.setup(Wire, I2C_ADDRESS);
+  usb_controller.detect();
+  usb_controller.power_set(true);
+  usb_controller.cc_pull_down();
+  
+  // Initialize Power Delivery
+  usb_controller.pd_reset_logic();
+  usb_controller.pd_autogoodcrc_set(true);
+  usb_controller.pd_autoretry_set(3);
+  usb_controller.pd_rx_flush();
+  
+  Serial.println("PD initialized");
+}
+
+void loop() {
+  // Check for received PD messages
+  struct usb_pd_message msg;
+  int result = usb_controller.pd_message_receive(msg);
+  
+  if (result == 1) {
+    Serial.print("Received PD message: Header=0x");
+    Serial.println(msg.header, HEX);
+    // Process message...
+  } else if (result < 0) {
+    Serial.println("Error receiving message");
+  }
+  
+  delay(100);
+}
+```
 
 ## API Reference
 
-### Initialization
-```cpp
-/* Setup I2C communication */
-int setup(TwoWire &i2c_library, uint8_t i2c_address);
+### setup(TwoWire &i2c_library, uint8_t i2c_address)
 
-/* Detect if chip is present */
-bool detect();
+Initializes the FUSB302 device.
 
-/* Software reset */
-int reset();
+- `i2c_library`: I2C library instance to use (typically `Wire`)
+- `i2c_address`: I2C address (typically 0x22)
 
-/* Power control */
-int power_set(bool on);
-```
+Returns 0 on success, or a negative error code otherwise.
 
-### USB Type-C Functions
-```cpp
-/* Measure CC pin status */
-int cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status &cc2);
+### detect(void)
 
-/* Set cable orientation */
-int cc_orientation_set(enum usb_typec_cc_orientation orientation);
+Detects if the FUSB302 device is present on the I2C bus by reading the device ID register.
 
-/* Configure CC pull resistors */
-int cc_pull_down();
-int cc_pull_up(enum usb_typec_cc_status status);
-```
+Returns true if the device is detected, false otherwise.
 
-### Voltage Measurement
-```cpp
-/* Measure VBUS voltage */
-int vbus_measure(float &voltage);
-```
+### reset(void)
 
-### USB Power Delivery
-```cpp
-/* PD initialization */
-int pd_reset();
-int pd_autogoodcrc_set(bool enabled);
-int pd_autoretry_set(int retries);
+Performs a software reset of the entire chip.
 
-/* Message handling */
-int pd_message_receive(struct usb_pd_message &msg);
-int pd_message_send(const struct usb_pd_message msg);
+Returns 0 on success, or a negative error code otherwise.
 
-/* Buffer management */
-int pd_rx_flush();
-int pd_tx_flush();
-```
+### power_set(bool on)
 
-### USB PD Message Structure
+Controls the power state of the FUSB302 device.
+
+- `on`: true to power on, false to power off
+
+Returns 0 on success, or a negative error code otherwise.
+
+### cc_pull_down(void)
+
+Configures the FUSB302 to present Rd (pull-down) resistors on both CC pins. Use this when acting as a device/sink.
+
+Returns 0 on success, or a negative error code otherwise.
+
+### cc_pull_up(enum usb_typec_cc_status status)
+
+Configures the FUSB302 to present Rp (pull-up) resistors on both CC pins. Use this when acting as a host/source.
+
+- `status`: The current level to advertise (USB_TYPEC_CC_STATUS_RP_DEF, USB_TYPEC_CC_STATUS_RP_1_5, or USB_TYPEC_CC_STATUS_RP_3_0)
+
+Returns 0 on success, or a negative error code otherwise.
+
+### cc_measure(enum usb_typec_cc_status &cc1, enum usb_typec_cc_status &cc2)
+
+Measures the voltage levels on both CC pins to determine their status and detect cable orientation.
+
+- `cc1`: Output parameter for CC1 pin status
+- `cc2`: Output parameter for CC2 pin status
+
+Returns 0 on success, or a negative error code otherwise.
+
+### cc_orientation_set(enum usb_typec_cc_orientation orientation)
+
+Configures the FUSB302 for a specific USB Type-C cable orientation. Call this after detecting cable orientation.
+
+- `orientation`: USB_TYPEC_CC_ORIENTATION_NORMAL or USB_TYPEC_CC_ORIENTATION_REVERSE
+
+Returns 0 on success, or a negative error code otherwise.
+
+### vbus_measure(float &voltage)
+
+Measures the VBUS voltage using the internal comparator and MDAC.
+
+- `voltage`: Output parameter for the measured voltage in Volts
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_reset_logic(void)
+
+Resets the USB Power Delivery logic of the FUSB302. Call this before starting PD communication.
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_reset_hard(void)
+
+Sends a USB Power Delivery Hard Reset sequence.
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_autogoodcrc_set(bool enabled)
+
+Enables or disables automatic GoodCRC response for received USB PD messages.
+
+- `enabled`: true to enable automatic GoodCRC response, false to disable
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_autoretry_set(int retries)
+
+Configures automatic retry behavior for USB PD message transmission.
+
+- `retries`: Number of retry attempts (0-3)
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_rx_flush(void)
+
+Flushes the USB PD receive FIFO buffer.
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_tx_flush(void)
+
+Flushes the USB PD transmit FIFO buffer.
+
+Returns 0 on success, or a negative error code otherwise.
+
+### pd_message_receive(struct usb_pd_message &msg)
+
+Checks for and receives a USB Power Delivery message from the FUSB302.
+
+- `msg`: Output parameter for the received message structure
+
+Returns 1 if a message was successfully received, 0 if no message was available, or a negative error code otherwise.
+
+### pd_message_send(const struct usb_pd_message msg)
+
+Sends a USB Power Delivery message through the FUSB302.
+
+- `msg`: The message structure to send
+
+Returns 0 on success, or a negative error code otherwise.
+
+**Message structure:**
 ```cpp
 struct usb_pd_message {
-    enum usb_pd_sop_type sop_type;  /* SOP, SOP', or SOP'' */
-    uint16_t header;                 /* Message header */
-    uint32_t objects[7];             /* Data objects */
-    uint8_t object_count;            /* Number of objects (0-7) */
+    enum usb_pd_sop_type sop_type;  // SOP, SOP', or SOP''
+    uint16_t header;                 // Message header
+    uint32_t objects[7];             // Data objects
+    uint8_t object_count;            // Number of objects (0-7)
 };
 ```
 
-## Error Handling
+### register_read(enum fusb302_register address, uint8_t *content, size_t count = 1)
 
-All methods return an integer error code:
-- `0`: Success
-- `1`: Success with data (for `pd_message_receive()`)
-- Negative values: Error codes
+Low-level register read operation (advanced usage).
 
-Common error codes:
-- `-EIO`: I2C communication error
-- `-EINVAL`: Invalid parameter
-- `-EBUSY`: Device busy
-- `-ENODEV`: Device not found
+- `address`: Register address to read from
+- `content`: Pointer to buffer where read data will be stored
+- `count`: Number of registers to read (default: 1)
 
-## Troubleshooting
+Returns 0 on success, or a negative error code otherwise.
 
-### Device Not Detected
-1. Check power supply is 3.3V (not 5V!)
-2. Verify I2C wiring (SDA, SCL, GND)
-3. Confirm I2C address (use I2C scanner)
-4. Check pull-up resistors on I2C lines (4.7kΩ)
-5. Ensure chip has proper power (check VDD pin)
+### register_write(enum fusb302_register address, const uint8_t *content, size_t count = 1)
 
-### Cable Not Detected
-1. Verify CC1 and CC2 are connected to USB-C connector
-2. Test with a different USB-C cable
-3. Ensure cable is fully inserted
-4. Check for proper CC pin termination
+Low-level register write operation (advanced usage).
 
-### No Power Delivery Messages
-1. Reset PD logic: `usb_controller.pd_reset()`
-2. Verify cable orientation is set correctly
-3. Confirm connected device supports USB PD
-4. Enable auto-GoodCRC: `usb_controller.pd_autogoodcrc_set(true)`
-5. Check that VBUS is present
+- `address`: Register address to write to
+- `content`: Pointer to buffer containing data to write
+- `count`: Number of registers to write (default: 1)
 
-### Incorrect VBUS Reading
-1. Verify VBUS connection to chip
-3. Ensure measurement range (0-22V)
-4. Test with known voltage source
+Returns 0 on success, or a negative error code otherwise.
 
-## License
+## Specifications
 
-This library is released under the MIT License. See [LICENSE.txt](LICENSE.txt) for details.
-
-## Additional Resources
-
-- [FUSB302 Datasheet](doc/onsemi%20FUSB302B%20Datasheet.pdf)
-- [USB Type-C Specification](https://www.usb.org/document-library/usb-type-cr-cable-and-connector-specification-release-24)
-- [USB Power Delivery Specification](https://www.usb.org/document-library/usb-power-delivery)
-
-## Support
-
-For support, please:
-1. Check the [Issues](https://github.com/sitronlabs/SitronLabs_Onsemi_FUSB302_Arduino_Library/issues) page
-2. Join our [Discord community](https://discord.gg/b6VzayWAMZ) for live support and discussion
-
----
-
-**Sitron Labs** - Helping makers build what matters
-
-[Website](https://sitronlabs.com) | [Store](https://www.sitronlabs.com/store) | [Discord](https://discord.gg/b6VzayWAMZ) | [GitHub](https://github.com/sitronlabs)
+- Supported devices: FUSB302B (default sink), FUSB302T (default source)
+- Communication interface: I2C
+- I2C address: 0x22 (FUSB302BMPX) or 0x22/0x23 (FUSB302TMPX, configurable)
+- Operating voltage: 3.3V or 5.0V
+- VBUS measurement range: 0-22V
+- USB Power Delivery: Full support for PD protocol
+- SOP types: SOP, SOP', and SOP''
+- CC pin configuration: Pull-up (Rp) or pull-down (Rd) resistors
