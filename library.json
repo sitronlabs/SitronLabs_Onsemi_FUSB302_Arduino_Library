@@ -1,6 +1,6 @@
 {
     "name": "Sitron_Labs_FUSB302_Arduino_Library",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "description": "Arduino library for the onsemi FUSB302 Programmable USB Type-C Controller with support for USB Power Delivery.",
     "keywords": "sitron labs,sitron,labs,arduino,library,communication,fairchild semiconductor,on semiconductor,onsemi,fusb302,fusb302b,fusb302t,usb,type-c,usb type-c,cc1,cc2,usb pd,usb power delivery,pd,power delivery,i2c",
     "repository": {
